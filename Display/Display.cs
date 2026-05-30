@@ -42,15 +42,14 @@ namespace tarkov_settings
                     return;
                 }
 
-                if (!string.IsNullOrEmpty(value) && displays.Contains(value))
-                {
-                    _primary = value;
-                    
-                }
-                else
-                {
-                    _primary = displays[0];
-                }
+                var nextPrimary = !string.IsNullOrEmpty(value) && displays.Contains(value)
+                    ? value
+                    : displays[0];
+
+                if (string.Equals(_primary, nextPrimary, StringComparison.OrdinalIgnoreCase))
+                    return;
+
+                _primary = nextPrimary;
                 try
                 {
                     gpu.Load(_primary);

@@ -526,8 +526,12 @@ namespace tarkov_settings
                 {
                     isLoadingDisplay = false;
                 }
-                Display.Primary = profile.display;
-                ColorController.Instance.UseCurrentDisplay();
+                if (displayChanged)
+                {
+                    Display.Primary = profile.display;
+                    ColorController.Instance.UseCurrentDisplay();
+                }
+
                 activeProfileDisplayAvailable = true;
             }
         }
