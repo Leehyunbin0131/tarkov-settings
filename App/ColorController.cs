@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,7 +16,9 @@ namespace tarkov_settings
         // Gamma Ramps
         private RAMP currentRamps;
         private RAMP originalRamps;
+        private string initializedDisplay;
         private bool initialized;
+        private readonly Dictionary<string, RAMP> originalRampsByDisplay = new Dictionary<string, RAMP>();
 
         /**
          * _canceller : Token Source to abort Async-Task (Gamma Value Change)
@@ -70,39 +73,24 @@ namespace tarkov_settings
 
         public void Init()
         {
-            // Backup Gamma Ramp
             lock (rampLock)
             {
-                var hdc = IntPtr.Zero;
-                try
-                {
-                    hdc = Display.CreateDC(null, Display.Primary, null, IntPtr.Zero);
-                    currentRamps = new RAMP();
-                    originalRamps = CreateDefaultRamp();
+                UseCurrentDisplayLocked();
+            }
+        }
 
-                    if (!IntPtr.Zero.Equals(hdc))
-                        GetDeviceGammaRamp(hdc, ref originalRamps);
-
-                    initialized = true;
-                    AppLogger.Info($"Color controller initialized for {Display.Primary}.");
-                }
-                catch (Exception ex)
-                {
-                    originalRamps = CreateDefaultRamp();
-                    initialized = true;
-                    AppLogger.Error("Failed to back up gamma ramp. Default ramp will be used for reset.", ex);
-                }
-                finally
-                {
-                    if (!IntPtr.Zero.Equals(hdc))
-                        Display.DeleteDC(hdc);
-                }
+        public void UseCurrentDisplay()
+        {
+            lock (rampLock)
+            {
+                StopRampLoopLocked();
+                UseCurrentDisplayLocked();
             }
         }
 
         public void ChangeColorRamp(double brightness = 0.5, double contrast = 0.5, double gamma = 1.0, bool reset = true)
         {
-            if (!initialized)
+            if (!initialized || initializedDisplay != Display.Primary)
                 Init();
 
             lock (rampLock)
@@ -182,6 +170,8 @@ namespace tarkov_settings
             lock (rampLock)
             {
                 StopRampLoopLocked();
+                if (!initialized || initializedDisplay != Display.Primary)
+                    UseCurrentDisplayLocked();
                 ApplyRamp(originalRamps);
             }
 
@@ -224,10 +214,15 @@ namespace tarkov_settings
 
         private bool ApplyRamp(RAMP ramps)
         {
+            return ApplyRamp(Display.Primary, ramps);
+        }
+
+        private bool ApplyRamp(string display, RAMP ramps)
+        {
             var hdc = IntPtr.Zero;
             try
             {
-                hdc = Display.CreateDC(null, Display.Primary, null, IntPtr.Zero);
+                hdc = Display.CreateDC(null, display, null, IntPtr.Zero);
                 if (IntPtr.Zero.Equals(hdc))
                     return false;
 
@@ -260,6 +255,46 @@ namespace tarkov_settings
             {
                 _canceller = null;
             }
+        }
+
+        private void UseCurrentDisplayLocked()
+        {
+            var display = Display.Primary;
+            currentRamps = new RAMP();
+            originalRamps = GetOriginalRamp(display);
+            initializedDisplay = display;
+            initialized = !string.IsNullOrWhiteSpace(display);
+            AppLogger.Info($"Color controller initialized for {display}.");
+        }
+
+        private RAMP GetOriginalRamp(string display)
+        {
+            if (string.IsNullOrWhiteSpace(display))
+                return CreateDefaultRamp();
+
+            if (originalRampsByDisplay.TryGetValue(display, out var ramp))
+                return ramp;
+
+            ramp = CreateDefaultRamp();
+            var hdc = IntPtr.Zero;
+            try
+            {
+                hdc = Display.CreateDC(null, display, null, IntPtr.Zero);
+                if (!IntPtr.Zero.Equals(hdc) && !GetDeviceGammaRamp(hdc, ref ramp))
+                    AppLogger.Error($"Failed to back up gamma ramp for {display}. Default ramp will be used for reset.");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Failed to back up gamma ramp for {display}. Default ramp will be used for reset.", ex);
+            }
+            finally
+            {
+                if (!IntPtr.Zero.Equals(hdc))
+                    Display.DeleteDC(hdc);
+            }
+
+            originalRampsByDisplay[display] = ramp;
+            return ramp;
         }
 
         private static RAMP CreateDefaultRamp()

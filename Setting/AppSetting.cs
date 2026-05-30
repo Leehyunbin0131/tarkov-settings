@@ -142,7 +142,9 @@ namespace tarkov_settings.Setting
             if (profiles == null || profiles.Count == 0)
                 profiles = new Dictionary<string, ColorProfile>();
 
-            var legacyProfile = GetLegacyProfile(previousActiveProfile);
+            var legacyProfile = shouldMigrateLegacyValues
+                ? CreateLegacyProfile()
+                : GetLegacyProfile(previousActiveProfile);
 
             for (var i = 0; i < PresetNames.Length; i++)
             {
@@ -179,6 +181,11 @@ namespace tarkov_settings.Setting
             if (!string.IsNullOrWhiteSpace(profileName) && profiles.ContainsKey(profileName))
                 return profiles[profileName];
 
+            return CreateLegacyProfile();
+        }
+
+        private ColorProfile CreateLegacyProfile()
+        {
             return new ColorProfile
             {
                 name = PresetNames[0],

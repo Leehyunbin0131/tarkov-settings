@@ -18,9 +18,13 @@ namespace tarkov_settings
         private bool forceMinimized = false;
         private bool isExiting = false;
         private bool shutdownFinalized = false;
+        private bool isLoadingAppSettings = false;
         private bool isLoadingProfile = false;
         private bool isLoadingLanguage = false;
+        private bool isLoadingDisplay = false;
+        private bool activeProfileDisplayAvailable = true;
         private bool hotkeysRegistered = false;
+        private readonly HashSet<int> registeredHotkeyIds = new HashSet<int>();
 
         private const int HOTKEY_TOGGLE_ENABLE = 1001;
         private const int HOTKEY_RESET_COLORS = 1002;
@@ -62,14 +66,24 @@ namespace tarkov_settings
             if (!string.IsNullOrWhiteSpace(startupProfile))
                 appSetting.SetActiveProfile(startupProfile);
 
-            LoadLanguageOptions();
-            LoadProfiles();
-            LoadActiveProfileIntoControls();
+            isLoadingAppSettings = true;
+            try
+            {
+                LoadLanguageOptions();
+                LoadProfiles();
+                LoadActiveProfileIntoControls();
 
-            minimizeOnStart = appSetting.minimizeOnStart || forceMinimized;
-            this.minimizeStartCheckBox.Checked = minimizeOnStart;
-            this.startWithWindowsCheckBox.Checked = appSetting.startWithWindows;
-            this.enableHotkeysCheckBox.Checked = appSetting.enableHotkeys;
+                minimizeOnStart = appSetting.minimizeOnStart;
+                this.minimizeStartCheckBox.Checked = appSetting.minimizeOnStart;
+                this.startWithWindowsCheckBox.Checked = appSetting.startWithWindows;
+                this.enableHotkeysCheckBox.Checked = appSetting.enableHotkeys;
+            }
+            finally
+            {
+                isLoadingAppSettings = false;
+            }
+
+            ApplyStartupRegistration(appSetting.startWithWindows);
             #endregion
             
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
@@ -86,15 +100,29 @@ namespace tarkov_settings
 
             #region Initialize Display
             // Initialize Display Dropdown
-            foreach (string display in Display.displays)
+            isLoadingDisplay = true;
+            try
             {
-                DisplayCombo.Items.Add(display);
+                foreach (string display in Display.displays)
+                {
+                    DisplayCombo.Items.Add(display);
+                }
+
+                if(DisplayCombo.FindStringExact(appSetting.display) != -1)
+                {
+                    DisplayCombo.SelectedIndex = DisplayCombo.FindStringExact(appSetting.display);
+                    activeProfileDisplayAvailable = true;
+                }
+                else if (DisplayCombo.Items.Count > 0)
+                {
+                    DisplayCombo.SelectedIndex = 0;
+                    activeProfileDisplayAvailable = false;
+                }
             }
-            
-            if(DisplayCombo.FindString(appSetting.display) != -1)
-                DisplayCombo.SelectedIndex = DisplayCombo.FindString(appSetting.display);
-            else if (DisplayCombo.Items.Count > 0)
-                DisplayCombo.SelectedIndex = 0;
+            finally
+            {
+                isLoadingDisplay = false;
+            }
 
             if (DisplayCombo.SelectedItem != null)
                 Display.Primary = (string)DisplayCombo.SelectedItem;
@@ -154,7 +182,7 @@ namespace tarkov_settings
         {
             RegisterAppHotkeys();
 
-            if (minimizeOnStart)
+            if (minimizeOnStart || forceMinimized)
             {
                 this.Visible = false;
                 this.ShowInTaskbar = false;
@@ -214,14 +242,34 @@ namespace tarkov_settings
         {
             if (DisplayCombo.SelectedItem == null)
                 return;
+            if (isLoadingDisplay)
+                return;
 
             string selectedDisplay = (string)DisplayCombo.SelectedItem;
+            if (Display.Primary == selectedDisplay)
+                return;
+
+            pMonitor.ResetColors();
             Display.Primary = selectedDisplay;
 
             if(Display.Primary != selectedDisplay)
             {
-                DisplayCombo.SelectedIndex = DisplayCombo.FindString(Display.Primary);
+                isLoadingDisplay = true;
+                try
+                {
+                    DisplayCombo.SelectedIndex = DisplayCombo.FindString(Display.Primary);
+                }
+                finally
+                {
+                    isLoadingDisplay = false;
+                }
+                return;
             }
+
+            activeProfileDisplayAvailable = true;
+            appSetting.display = selectedDisplay;
+            ColorController.Instance.UseCurrentDisplay();
+            pMonitor.RefreshCurrentFocus();
         }
 
         private void ProfileCombo_SelectedValueChanged(object sender, EventArgs e)
@@ -327,10 +375,15 @@ namespace tarkov_settings
         private void CheckOnMinimizeToTray(object sender, EventArgs e)
         {
             this.minimizeOnStart = this.minimizeStartCheckBox.Checked;
+            if (!isLoadingAppSettings)
+                SaveSettings();
         }
 
         private void CheckOnStartWithWindows(object sender, EventArgs e)
         {
+            if (isLoadingAppSettings)
+                return;
+
             appSetting.startWithWindows = this.startWithWindowsCheckBox.Checked;
             ApplyStartupRegistration(appSetting.startWithWindows);
             SaveSettings();
@@ -338,6 +391,9 @@ namespace tarkov_settings
 
         private void CheckOnEnableHotkeys(object sender, EventArgs e)
         {
+            if (isLoadingAppSettings)
+                return;
+
             appSetting.enableHotkeys = this.enableHotkeysCheckBox.Checked;
             if (appSetting.enableHotkeys)
                 RegisterAppHotkeys();
@@ -457,27 +513,47 @@ namespace tarkov_settings
             Gamma = profile.gamma;
             DVL = profile.saturation;
             appSetting.display = profile.display;
+            activeProfileDisplayAvailable = false;
 
             if (DisplayCombo.Items.Count > 0 && DisplayCombo.FindStringExact(profile.display) != -1)
             {
-                DisplayCombo.SelectedItem = profile.display;
+                var displayChanged = Display.Primary != profile.display;
+                if (displayChanged && !isLoadingAppSettings)
+                    pMonitor.ResetColors();
+
+                isLoadingDisplay = true;
+                try
+                {
+                    DisplayCombo.SelectedItem = profile.display;
+                }
+                finally
+                {
+                    isLoadingDisplay = false;
+                }
                 Display.Primary = profile.display;
+                ColorController.Instance.UseCurrentDisplay();
+                activeProfileDisplayAvailable = true;
             }
         }
 
         private void SaveActiveProfileValues()
         {
+            var selectedDisplay = activeProfileDisplayAvailable
+                ? DisplayCombo.SelectedItem?.ToString() ?? appSetting.display
+                : appSetting.display;
+
             appSetting.UpdateActiveProfile(
                 Brightness,
                 Contrast,
                 Gamma,
                 DVL,
-                DisplayCombo.SelectedItem?.ToString() ?? appSetting.display);
+                selectedDisplay);
         }
 
-        private void SaveSettings()
+        private void SaveSettings(bool saveActiveProfileValues = true)
         {
-            SaveActiveProfileValues();
+            if (saveActiveProfileValues)
+                SaveActiveProfileValues();
             appSetting.minimizeOnStart = minimizeOnStart;
             appSetting.startWithWindows = startWithWindowsCheckBox.Checked;
             appSetting.enableHotkeys = enableHotkeysCheckBox.Checked;
@@ -504,7 +580,7 @@ namespace tarkov_settings
             ProfileCombo.SelectedItem = appSetting.activeProfile;
             isLoadingProfile = false;
 
-            SaveSettings();
+            SaveSettings(false);
             pMonitor.RefreshCurrentFocus();
             UpdateRuntimeStatus(fromHotkey ? "Preset Hotkey" : "Preset Loaded", appSetting.activeProfile);
         }
@@ -813,27 +889,52 @@ namespace tarkov_settings
             if (hotkeysRegistered || appSetting == null || !appSetting.enableHotkeys || !IsHandleCreated)
                 return;
 
-            hotkeysRegistered = true;
-            RegisterHotKey(Handle, HOTKEY_TOGGLE_ENABLE, MOD_CONTROL | MOD_ALT, (uint)Keys.T);
-            RegisterHotKey(Handle, HOTKEY_RESET_COLORS, MOD_CONTROL | MOD_ALT, (uint)Keys.R);
-            RegisterHotKey(Handle, HOTKEY_PRESET_1, MOD_CONTROL | MOD_ALT, (uint)Keys.D1);
-            RegisterHotKey(Handle, HOTKEY_PRESET_2, MOD_CONTROL | MOD_ALT, (uint)Keys.D2);
-            RegisterHotKey(Handle, HOTKEY_PRESET_3, MOD_CONTROL | MOD_ALT, (uint)Keys.D3);
-            RegisterHotKey(Handle, HOTKEY_PRESET_4, MOD_CONTROL | MOD_ALT, (uint)Keys.D4);
+            registeredHotkeyIds.Clear();
+            var registeredAll =
+                TryRegisterAppHotkey(HOTKEY_TOGGLE_ENABLE, Keys.T) &
+                TryRegisterAppHotkey(HOTKEY_RESET_COLORS, Keys.R) &
+                TryRegisterAppHotkey(HOTKEY_PRESET_1, Keys.D1) &
+                TryRegisterAppHotkey(HOTKEY_PRESET_2, Keys.D2) &
+                TryRegisterAppHotkey(HOTKEY_PRESET_3, Keys.D3) &
+                TryRegisterAppHotkey(HOTKEY_PRESET_4, Keys.D4);
+
+            if (registeredAll)
+            {
+                hotkeysRegistered = true;
+                return;
+            }
+
+            UnregisterAppHotkeys();
+            appSetting.enableHotkeys = false;
+            enableHotkeysCheckBox.Checked = false;
+            SaveSettings();
+            UpdateRuntimeStatus("Hotkey Error");
         }
 
         private void UnregisterAppHotkeys()
         {
-            if (!hotkeysRegistered || !IsHandleCreated)
+            if (registeredHotkeyIds.Count == 0 || !IsHandleCreated)
                 return;
 
-            UnregisterHotKey(Handle, HOTKEY_TOGGLE_ENABLE);
-            UnregisterHotKey(Handle, HOTKEY_RESET_COLORS);
-            UnregisterHotKey(Handle, HOTKEY_PRESET_1);
-            UnregisterHotKey(Handle, HOTKEY_PRESET_2);
-            UnregisterHotKey(Handle, HOTKEY_PRESET_3);
-            UnregisterHotKey(Handle, HOTKEY_PRESET_4);
+            foreach (var hotkeyId in registeredHotkeyIds)
+            {
+                UnregisterHotKey(Handle, hotkeyId);
+            }
+
+            registeredHotkeyIds.Clear();
             hotkeysRegistered = false;
+        }
+
+        private bool TryRegisterAppHotkey(int id, Keys key)
+        {
+            if (RegisterHotKey(Handle, id, MOD_CONTROL | MOD_ALT, (uint)key))
+            {
+                registeredHotkeyIds.Add(id);
+                return true;
+            }
+
+            AppLogger.Error($"Failed to register hotkey Ctrl+Alt+{key}.");
+            return false;
         }
 
         private void ApplyStartupRegistration(bool enabled)
