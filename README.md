@@ -44,6 +44,10 @@ Settings are saved to `%APPDATA%\tarkov-settings\settings.json`.
 - **Color**: Brightness, Contrast, Gamma, DVL/Saturation, four presets, and display settings
 - **Miscs**: Windows startup, hotkeys, language, and minimize-to-tray options
 
+## Release Package
+The latest GitHub release ships a single `tarkov-settings.exe` file.
+Download and run the executable directly; no zip package or installer is required.
+
 ## Hotkeys
 - `Ctrl + Alt + T`: Toggle Enable on/off
 - `Ctrl + Alt + R`: Reset colors
