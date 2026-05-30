@@ -49,24 +49,20 @@
             this.DisplayCombo = new System.Windows.Forms.ComboBox();
             this.DVLGroupBox = new System.Windows.Forms.GroupBox();
             this.DVLPanel = new System.Windows.Forms.Panel();
-            this.DVLHelpLabel = new System.Windows.Forms.Label();
             this.DVLLabel = new System.Windows.Forms.Label();
             this.DVLBar = new System.Windows.Forms.TrackBar();
             this.DVLText = new System.Windows.Forms.TextBox();
             this.colorGroupBox = new System.Windows.Forms.GroupBox();
             this.colorTablePanel = new System.Windows.Forms.TableLayoutPanel();
             this.brightnessPanel = new System.Windows.Forms.Panel();
-            this.BrightnessHelpLabel = new System.Windows.Forms.Label();
             this.BrightnessBar = new System.Windows.Forms.TrackBar();
             this.BrightnessLabel = new System.Windows.Forms.Label();
             this.BrightnessText = new System.Windows.Forms.TextBox();
             this.contrastPanel = new System.Windows.Forms.Panel();
-            this.ContrastHelpLabel = new System.Windows.Forms.Label();
             this.ContrastBar = new System.Windows.Forms.TrackBar();
             this.ContrastText = new System.Windows.Forms.TextBox();
             this.ContrastLabel = new System.Windows.Forms.Label();
             this.gammaPanel = new System.Windows.Forms.Panel();
-            this.GammaHelpLabel = new System.Windows.Forms.Label();
             this.GammaText = new System.Windows.Forms.TextBox();
             this.GammaBar = new System.Windows.Forms.TrackBar();
             this.GammaLabel = new System.Windows.Forms.Label();
@@ -197,9 +193,9 @@
             this.HotkeyHelpLabel.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
             this.HotkeyHelpLabel.Location = new System.Drawing.Point(24, 116);
             this.HotkeyHelpLabel.Name = "HotkeyHelpLabel";
-            this.HotkeyHelpLabel.Size = new System.Drawing.Size(248, 102);
+            this.HotkeyHelpLabel.Size = new System.Drawing.Size(248, 85);
             this.HotkeyHelpLabel.TabIndex = 21;
-            this.HotkeyHelpLabel.Text = "Ctrl+Alt+T: Toggle\r\nCtrl+Alt+R: Reset\r\nCtrl+Alt+1: Preset 1\r\nCtrl+Alt+2: Preset 2\r\nCtrl+Alt+3: Preset 3\r\nCtrl+Alt+4: Preset 4";
+            this.HotkeyHelpLabel.Text = "Ctrl+Alt+T: Toggle\r\nCtrl+Alt+1: Preset 1\r\nCtrl+Alt+2: Preset 2\r\nCtrl+Alt+3: Preset 3\r\nCtrl+Alt+4: Preset 4";
             //
             // StatusLabel
             //
@@ -332,7 +328,6 @@
             // 
             // DVLPanel
             // 
-            this.DVLPanel.Controls.Add(this.DVLHelpLabel);
             this.DVLPanel.Controls.Add(this.DVLLabel);
             this.DVLPanel.Controls.Add(this.DVLBar);
             this.DVLPanel.Controls.Add(this.DVLText);
@@ -341,20 +336,6 @@
             this.DVLPanel.Name = "DVLPanel";
             this.DVLPanel.Size = new System.Drawing.Size(139, 279);
             this.DVLPanel.TabIndex = 0;
-            // 
-            // DVLHelpLabel
-            // 
-            this.DVLHelpLabel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.DVLHelpLabel.Cursor = System.Windows.Forms.Cursors.Help;
-            this.DVLHelpLabel.ForeColor = System.Drawing.SystemColors.HotTrack;
-            this.DVLHelpLabel.Location = new System.Drawing.Point(104, 11);
-            this.DVLHelpLabel.Name = "DVLHelpLabel";
-            this.DVLHelpLabel.Size = new System.Drawing.Size(18, 18);
-            this.DVLHelpLabel.TabIndex = 12;
-            this.DVLHelpLabel.Text = "?";
-            this.DVLHelpLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.dvlToolTip.SetToolTip(this.DVLHelpLabel, "Digital Vibrance / Saturation changes color intensity.\r\nHigher values make colors more vivid and easier to distinguish.\r\nThis setting uses NVIDIA NvAPI and is disabled on unsupported GPUs.\r\nDouble-click the setting label to reset it.");
-            // 
             // DVLLabel
             // 
             this.DVLLabel.AutoSize = true;
@@ -419,7 +400,6 @@
             // 
             // brightnessPanel
             // 
-            this.brightnessPanel.Controls.Add(this.BrightnessHelpLabel);
             this.brightnessPanel.Controls.Add(this.BrightnessBar);
             this.brightnessPanel.Controls.Add(this.BrightnessLabel);
             this.brightnessPanel.Controls.Add(this.BrightnessText);
@@ -428,20 +408,6 @@
             this.brightnessPanel.Name = "brightnessPanel";
             this.brightnessPanel.Size = new System.Drawing.Size(478, 87);
             this.brightnessPanel.TabIndex = 0;
-            // 
-            // BrightnessHelpLabel
-            // 
-            this.BrightnessHelpLabel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.BrightnessHelpLabel.Cursor = System.Windows.Forms.Cursors.Help;
-            this.BrightnessHelpLabel.ForeColor = System.Drawing.SystemColors.HotTrack;
-            this.BrightnessHelpLabel.Location = new System.Drawing.Point(136, 10);
-            this.BrightnessHelpLabel.Name = "BrightnessHelpLabel";
-            this.BrightnessHelpLabel.Size = new System.Drawing.Size(18, 18);
-            this.BrightnessHelpLabel.TabIndex = 25;
-            this.BrightnessHelpLabel.Text = "?";
-            this.BrightnessHelpLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.brightnessToolTip.SetToolTip(this.BrightnessHelpLabel, "Brightness shifts the whole gamma ramp brighter or darker.\r\nUse it when dark areas are too hard to see or the image is washed out.\r\nDefault is 0.50. Double-click the setting label to reset it.");
-            // 
             // BrightnessBar
             // 
             this.BrightnessBar.Location = new System.Drawing.Point(13, 27);
@@ -479,7 +445,6 @@
             // 
             // contrastPanel
             // 
-            this.contrastPanel.Controls.Add(this.ContrastHelpLabel);
             this.contrastPanel.Controls.Add(this.ContrastBar);
             this.contrastPanel.Controls.Add(this.ContrastText);
             this.contrastPanel.Controls.Add(this.ContrastLabel);
@@ -488,20 +453,6 @@
             this.contrastPanel.Name = "contrastPanel";
             this.contrastPanel.Size = new System.Drawing.Size(478, 87);
             this.contrastPanel.TabIndex = 1;
-            // 
-            // ContrastHelpLabel
-            // 
-            this.ContrastHelpLabel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.ContrastHelpLabel.Cursor = System.Windows.Forms.Cursors.Help;
-            this.ContrastHelpLabel.ForeColor = System.Drawing.SystemColors.HotTrack;
-            this.ContrastHelpLabel.Location = new System.Drawing.Point(116, 22);
-            this.ContrastHelpLabel.Name = "ContrastHelpLabel";
-            this.ContrastHelpLabel.Size = new System.Drawing.Size(18, 18);
-            this.ContrastHelpLabel.TabIndex = 26;
-            this.ContrastHelpLabel.Text = "?";
-            this.ContrastHelpLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.contrastToolTip.SetToolTip(this.ContrastHelpLabel, "Contrast increases or decreases the gap between dark and bright colors.\r\nHigher values make edges pop but can crush details.\r\nDefault is 0.50. Double-click the setting label to reset it.");
-            // 
             // ContrastBar
             // 
             this.ContrastBar.Location = new System.Drawing.Point(13, 39);
@@ -539,7 +490,6 @@
             // 
             // gammaPanel
             // 
-            this.gammaPanel.Controls.Add(this.GammaHelpLabel);
             this.gammaPanel.Controls.Add(this.GammaText);
             this.gammaPanel.Controls.Add(this.GammaBar);
             this.gammaPanel.Controls.Add(this.GammaLabel);
@@ -548,20 +498,6 @@
             this.gammaPanel.Name = "gammaPanel";
             this.gammaPanel.Size = new System.Drawing.Size(478, 87);
             this.gammaPanel.TabIndex = 2;
-            // 
-            // GammaHelpLabel
-            // 
-            this.GammaHelpLabel.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            this.GammaHelpLabel.Cursor = System.Windows.Forms.Cursors.Help;
-            this.GammaHelpLabel.ForeColor = System.Drawing.SystemColors.HotTrack;
-            this.GammaHelpLabel.Location = new System.Drawing.Point(86, 23);
-            this.GammaHelpLabel.Name = "GammaHelpLabel";
-            this.GammaHelpLabel.Size = new System.Drawing.Size(18, 18);
-            this.GammaHelpLabel.TabIndex = 27;
-            this.GammaHelpLabel.Text = "?";
-            this.GammaHelpLabel.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
-            this.gammaToolTip.SetToolTip(this.GammaHelpLabel, "Gamma changes mid-tone brightness without moving pure black and white as much.\r\nLower values darken mid-tones; higher values brighten them.\r\nDefault is 1.00. Double-click the setting label to reset it.");
-            // 
             // GammaText
             // 
             this.GammaText.Location = new System.Drawing.Point(424, 40);
@@ -763,10 +699,6 @@
         private System.Windows.Forms.ToolTip brightnessToolTip;
         private System.Windows.Forms.ToolTip contrastToolTip;
         private System.Windows.Forms.ToolTip gammaToolTip;
-        private System.Windows.Forms.Label BrightnessHelpLabel;
-        private System.Windows.Forms.Label ContrastHelpLabel;
-        private System.Windows.Forms.Label GammaHelpLabel;
-        private System.Windows.Forms.Label DVLHelpLabel;
     }
 }
 
