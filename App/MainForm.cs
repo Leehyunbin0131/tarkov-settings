@@ -22,6 +22,10 @@ namespace tarkov_settings
 
         private const int HOTKEY_TOGGLE_ENABLE = 1001;
         private const int HOTKEY_RESET_COLORS = 1002;
+        private const int HOTKEY_PRESET_1 = 1011;
+        private const int HOTKEY_PRESET_2 = 1012;
+        private const int HOTKEY_PRESET_3 = 1013;
+        private const int HOTKEY_PRESET_4 = 1014;
         private const int WM_HOTKEY = 0x0312;
         private const uint MOD_ALT = 0x0001;
         private const uint MOD_CONTROL = 0x0002;
@@ -210,13 +214,16 @@ namespace tarkov_settings
             if (isLoadingProfile || ProfileCombo.SelectedItem == null)
                 return;
 
-            SaveActiveProfileValues();
-            appSetting.SetActiveProfile(ProfileCombo.SelectedItem.ToString());
-            LoadActiveProfileIntoControls();
-            SaveSettings();
-            UpdateRuntimeStatus("Profile Loaded", appSetting.activeProfile);
+            SwitchPreset(ProfileCombo.SelectedItem.ToString(), false);
         }
         #endregion
+
+        private void SavePresetClicked(object sender, EventArgs e)
+        {
+            SaveSettings();
+            pMonitor.RefreshCurrentFocus();
+            UpdateRuntimeStatus("Preset Saved", appSetting.activeProfile);
+        }
 
         private void ShowForm(object sender, EventArgs e)
         {
@@ -229,7 +236,10 @@ namespace tarkov_settings
             colorGroupBox.Visible = true;
             DVLGroupBox.Visible = true;
             ProfileCombo.Visible = true;
+            PresetLabel.Visible = true;
+            SavePresetButton.Visible = true;
             DisplayCombo.Visible = true;
+            DisplayLabel.Visible = true;
 
             startWithWindowsCheckBox.Visible = false;
             enableHotkeysCheckBox.Visible = false;
@@ -246,7 +256,10 @@ namespace tarkov_settings
             colorGroupBox.Visible = false;
             DVLGroupBox.Visible = false;
             ProfileCombo.Visible = false;
+            PresetLabel.Visible = false;
+            SavePresetButton.Visible = false;
             DisplayCombo.Visible = false;
+            DisplayLabel.Visible = false;
 
             startWithWindowsCheckBox.Visible = true;
             enableHotkeysCheckBox.Visible = true;
@@ -351,6 +364,18 @@ namespace tarkov_settings
                     case HOTKEY_RESET_COLORS:
                         ResetColorsClicked(this, EventArgs.Empty);
                         break;
+                    case HOTKEY_PRESET_1:
+                        SwitchPreset(AppSetting.PresetNames[0], true);
+                        break;
+                    case HOTKEY_PRESET_2:
+                        SwitchPreset(AppSetting.PresetNames[1], true);
+                        break;
+                    case HOTKEY_PRESET_3:
+                        SwitchPreset(AppSetting.PresetNames[2], true);
+                        break;
+                    case HOTKEY_PRESET_4:
+                        SwitchPreset(AppSetting.PresetNames[3], true);
+                        break;
                 }
             }
 
@@ -361,7 +386,7 @@ namespace tarkov_settings
         {
             isLoadingProfile = true;
             ProfileCombo.Items.Clear();
-            foreach (var profileName in appSetting.profiles.Keys)
+            foreach (var profileName in AppSetting.PresetNames)
             {
                 ProfileCombo.Items.Add(profileName);
             }
@@ -377,6 +402,12 @@ namespace tarkov_settings
             Gamma = profile.gamma;
             DVL = profile.saturation;
             appSetting.display = profile.display;
+
+            if (DisplayCombo.Items.Count > 0 && DisplayCombo.FindStringExact(profile.display) != -1)
+            {
+                DisplayCombo.SelectedItem = profile.display;
+                Display.Primary = profile.display;
+            }
         }
 
         private void SaveActiveProfileValues()
@@ -396,6 +427,24 @@ namespace tarkov_settings
             appSetting.startWithWindows = startWithWindowsCheckBox.Checked;
             appSetting.enableHotkeys = enableHotkeysCheckBox.Checked;
             appSetting.Save();
+        }
+
+        private void SwitchPreset(string presetName, bool fromHotkey)
+        {
+            if (string.IsNullOrWhiteSpace(presetName))
+                return;
+
+            SaveActiveProfileValues();
+            appSetting.SetActiveProfile(presetName);
+            LoadActiveProfileIntoControls();
+
+            isLoadingProfile = true;
+            ProfileCombo.SelectedItem = appSetting.activeProfile;
+            isLoadingProfile = false;
+
+            SaveSettings();
+            pMonitor.RefreshCurrentFocus();
+            UpdateRuntimeStatus(fromHotkey ? "Preset Hotkey" : "Preset Loaded", appSetting.activeProfile);
         }
 
         private void FinalizeShutdown()
@@ -420,6 +469,10 @@ namespace tarkov_settings
             hotkeysRegistered = true;
             RegisterHotKey(Handle, HOTKEY_TOGGLE_ENABLE, MOD_CONTROL | MOD_ALT, (uint)Keys.T);
             RegisterHotKey(Handle, HOTKEY_RESET_COLORS, MOD_CONTROL | MOD_ALT, (uint)Keys.R);
+            RegisterHotKey(Handle, HOTKEY_PRESET_1, MOD_CONTROL | MOD_ALT, (uint)Keys.D1);
+            RegisterHotKey(Handle, HOTKEY_PRESET_2, MOD_CONTROL | MOD_ALT, (uint)Keys.D2);
+            RegisterHotKey(Handle, HOTKEY_PRESET_3, MOD_CONTROL | MOD_ALT, (uint)Keys.D3);
+            RegisterHotKey(Handle, HOTKEY_PRESET_4, MOD_CONTROL | MOD_ALT, (uint)Keys.D4);
         }
 
         private void UnregisterAppHotkeys()
@@ -429,6 +482,10 @@ namespace tarkov_settings
 
             UnregisterHotKey(Handle, HOTKEY_TOGGLE_ENABLE);
             UnregisterHotKey(Handle, HOTKEY_RESET_COLORS);
+            UnregisterHotKey(Handle, HOTKEY_PRESET_1);
+            UnregisterHotKey(Handle, HOTKEY_PRESET_2);
+            UnregisterHotKey(Handle, HOTKEY_PRESET_3);
+            UnregisterHotKey(Handle, HOTKEY_PRESET_4);
             hotkeysRegistered = false;
         }
 

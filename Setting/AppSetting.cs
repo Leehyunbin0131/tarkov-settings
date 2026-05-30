@@ -15,16 +15,25 @@ namespace tarkov_settings.Setting
 
     class AppSetting : Settings<AppSetting>
     {
+        public const int PresetCount = 4;
+        public static readonly string[] PresetNames =
+        {
+            "Preset 1",
+            "Preset 2",
+            "Preset 3",
+            "Preset 4"
+        };
+
         public int schemaVersion = 0;
 
-        public string activeProfile = "Tarkov";
+        public string activeProfile = "Preset 1";
         public Dictionary<string, ColorProfile> profiles = new Dictionary<string, ColorProfile>
         {
             {
-                "Tarkov",
+                "Preset 1",
                 new ColorProfile
                 {
-                    name = "Tarkov",
+                    name = "Preset 1",
                     brightness = 0.5,
                     contrast = 0.5,
                     gamma = 1.0,
@@ -33,10 +42,34 @@ namespace tarkov_settings.Setting
                 }
             },
             {
-                "Default",
+                "Preset 2",
                 new ColorProfile
                 {
-                    name = "Default",
+                    name = "Preset 2",
+                    brightness = 0.5,
+                    contrast = 0.5,
+                    gamma = 1.0,
+                    saturation = 0,
+                    display = @"\\.\DISPLAY1"
+                }
+            },
+            {
+                "Preset 3",
+                new ColorProfile
+                {
+                    name = "Preset 3",
+                    brightness = 0.5,
+                    contrast = 0.5,
+                    gamma = 1.0,
+                    saturation = 0,
+                    display = @"\\.\DISPLAY1"
+                }
+            },
+            {
+                "Preset 4",
+                new ColorProfile
+                {
+                    name = "Preset 4",
                     brightness = 0.5,
                     contrast = 0.5,
                     gamma = 1.0,
@@ -95,8 +128,9 @@ namespace tarkov_settings.Setting
 
         public void Normalize()
         {
-            var shouldMigrateLegacyValues = schemaVersion < 2;
-            schemaVersion = 2;
+            var shouldMigrateLegacyValues = schemaVersion < 3;
+            var previousActiveProfile = activeProfile;
+            schemaVersion = 3;
 
             if (pTargets == null || pTargets.Count == 0)
                 pTargets = new HashSet<string> { "EscapeFromTarkov" };
@@ -104,42 +138,25 @@ namespace tarkov_settings.Setting
             if (profiles == null || profiles.Count == 0)
                 profiles = new Dictionary<string, ColorProfile>();
 
-            if (string.IsNullOrWhiteSpace(activeProfile))
-                activeProfile = "Tarkov";
+            var legacyProfile = GetLegacyProfile(previousActiveProfile);
 
-            if (!profiles.ContainsKey(activeProfile))
+            for (var i = 0; i < PresetNames.Length; i++)
             {
-                profiles[activeProfile] = new ColorProfile
-                {
-                    name = activeProfile,
-                    brightness = brightness,
-                    contrast = contrast,
-                    gamma = gamma,
-                    saturation = saturation,
-                    display = display
-                };
+                var presetName = PresetNames[i];
+                if (!profiles.ContainsKey(presetName))
+                    profiles[presetName] = CreateDefaultProfile(presetName);
             }
 
-            if (!profiles.ContainsKey("Default"))
-            {
-                profiles["Default"] = new ColorProfile
-                {
-                    name = "Default",
-                    brightness = 0.5,
-                    contrast = 0.5,
-                    gamma = 1.0,
-                    saturation = 0,
-                    display = display
-                };
-            }
+            if (string.IsNullOrWhiteSpace(activeProfile) || Array.IndexOf(PresetNames, activeProfile) < 0)
+                activeProfile = PresetNames[0];
 
             if (shouldMigrateLegacyValues)
             {
-                profiles[activeProfile].brightness = brightness;
-                profiles[activeProfile].contrast = contrast;
-                profiles[activeProfile].gamma = gamma;
-                profiles[activeProfile].saturation = saturation;
-                profiles[activeProfile].display = display;
+                profiles[PresetNames[0]].brightness = legacyProfile.brightness;
+                profiles[PresetNames[0]].contrast = legacyProfile.contrast;
+                profiles[PresetNames[0]].gamma = legacyProfile.gamma;
+                profiles[PresetNames[0]].saturation = legacyProfile.saturation;
+                profiles[PresetNames[0]].display = legacyProfile.display;
             }
 
             foreach (var pair in profiles)
@@ -151,6 +168,35 @@ namespace tarkov_settings.Setting
             }
 
             ApplyActiveProfileToLegacyFields();
+        }
+
+        private ColorProfile GetLegacyProfile(string profileName)
+        {
+            if (!string.IsNullOrWhiteSpace(profileName) && profiles.ContainsKey(profileName))
+                return profiles[profileName];
+
+            return new ColorProfile
+            {
+                name = PresetNames[0],
+                brightness = brightness,
+                contrast = contrast,
+                gamma = gamma,
+                saturation = saturation,
+                display = display
+            };
+        }
+
+        private ColorProfile CreateDefaultProfile(string presetName)
+        {
+            return new ColorProfile
+            {
+                name = presetName,
+                brightness = 0.5,
+                contrast = 0.5,
+                gamma = 1.0,
+                saturation = 0,
+                display = display
+            };
         }
 
         private void ApplyActiveProfileToLegacyFields()

@@ -30,20 +30,26 @@ You can change any of the following color settings:
 ## How to Use
 1. Download `tarkov-settings.exe` from the latest release.
 2. Open application (SmartScreen might prevent opening as it's not signed)
-3. Set any color value
-4. Double-click any slider labels to reset their values.
-5. Minimize and play EFT
-6. Close application if you want to deactivate
+3. Choose one of the four presets.
+4. Set any color value and click **Save** to store it in the selected preset.
+5. Hover the `?` icons next to each setting to see what it changes.
+6. Double-click any slider labels to reset their values.
+7. Minimize and play EFT
+8. Close application if you want to deactivate
 
 Settings are saved to `%APPDATA%\tarkov-settings\settings.json`.
 
 ## App Controls
-- **Color**: Brightness, Contrast, Gamma, DVL/Saturation, profile, and display settings
+- **Color**: Brightness, Contrast, Gamma, DVL/Saturation, four presets, and display settings
 - **Miscs**: Windows startup, hotkeys, and minimize-to-tray options
 
 ## Hotkeys
 - `Ctrl + Alt + T`: Toggle Enable on/off
 - `Ctrl + Alt + R`: Reset colors
+- `Ctrl + Alt + 1`: Switch to Preset 1
+- `Ctrl + Alt + 2`: Switch to Preset 2
+- `Ctrl + Alt + 3`: Switch to Preset 3
+- `Ctrl + Alt + 4`: Switch to Preset 4
 
 ## Warning
 1. It might blink couple times when you active EFT window but it works. Don't worry.
@@ -64,6 +70,7 @@ Settings are saved to `%APPDATA%\tarkov-settings\settings.json`.
 - [x] change display(monitor) target
 - [x] Minimize to tray
 - [x] Profiles
+- [x] 4 preset hotkeys
 - [x] Hot Keys
 - [ ] EFT setting modify (Framelimit or Graphic Settings)
 
