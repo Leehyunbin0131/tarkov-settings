@@ -37,7 +37,7 @@ namespace tarkov_settings
         private const string StartupRegistryValueName = "Tarkov Settings";
         private const string StartupRegistryPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
 
-        [DllImport("user32.dll")]
+        [DllImport("user32.dll", SetLastError = true)]
         private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
 
         [DllImport("user32.dll")]
@@ -865,23 +865,18 @@ namespace tarkov_settings
                 return;
 
             registeredHotkeyIds.Clear();
-            var registeredAll =
-                TryRegisterAppHotkey(HOTKEY_TOGGLE_ENABLE, Keys.T) &
-                TryRegisterAppHotkey(HOTKEY_PRESET_1, Keys.D1) &
-                TryRegisterAppHotkey(HOTKEY_PRESET_2, Keys.D2) &
-                TryRegisterAppHotkey(HOTKEY_PRESET_3, Keys.D3) &
-                TryRegisterAppHotkey(HOTKEY_PRESET_4, Keys.D4);
+            TryRegisterAppHotkey(HOTKEY_TOGGLE_ENABLE, Keys.T);
+            TryRegisterAppHotkey(HOTKEY_PRESET_1, Keys.D1);
+            TryRegisterAppHotkey(HOTKEY_PRESET_2, Keys.D2);
+            TryRegisterAppHotkey(HOTKEY_PRESET_3, Keys.D3);
+            TryRegisterAppHotkey(HOTKEY_PRESET_4, Keys.D4);
 
-            if (registeredAll)
+            if (registeredHotkeyIds.Count > 0)
             {
                 hotkeysRegistered = true;
                 return;
             }
 
-            UnregisterAppHotkeys();
-            appSetting.enableHotkeys = false;
-            enableHotkeysCheckBox.Checked = false;
-            SaveSettings();
             UpdateRuntimeStatus("Hotkey Error");
         }
 
@@ -907,7 +902,7 @@ namespace tarkov_settings
                 return true;
             }
 
-            AppLogger.Error($"Failed to register hotkey Ctrl+Alt+{key}.");
+            AppLogger.Error($"Failed to register hotkey Ctrl+Alt+{key}. Win32Error={Marshal.GetLastWin32Error()}");
             return false;
         }
 
