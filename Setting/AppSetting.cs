@@ -91,6 +91,7 @@ namespace tarkov_settings.Setting
         public bool minimizeOnStart = false;
         public bool startWithWindows = false;
         public bool enableHotkeys = true;
+        public string language = "en";
 
         public static new AppSetting Load(string fileName = Settings<AppSetting>.DEFAULT_FILENAME)
         {
@@ -130,10 +131,13 @@ namespace tarkov_settings.Setting
         {
             var shouldMigrateLegacyValues = schemaVersion < 3;
             var previousActiveProfile = activeProfile;
-            schemaVersion = 3;
+            schemaVersion = 4;
 
             if (pTargets == null || pTargets.Count == 0)
                 pTargets = new HashSet<string> { "EscapeFromTarkov" };
+
+            if (!IsSupportedLanguage(language))
+                language = "en";
 
             if (profiles == null || profiles.Count == 0)
                 profiles = new Dictionary<string, ColorProfile>();
@@ -197,6 +201,11 @@ namespace tarkov_settings.Setting
                 saturation = 0,
                 display = display
             };
+        }
+
+        private bool IsSupportedLanguage(string value)
+        {
+            return value == "en" || value == "ko" || value == "ja" || value == "zh";
         }
 
         private void ApplyActiveProfileToLegacyFields()

@@ -40,6 +40,8 @@
             this.PresetLabel = new System.Windows.Forms.Label();
             this.DisplayLabel = new System.Windows.Forms.Label();
             this.SavePresetButton = new System.Windows.Forms.Button();
+            this.LanguageLabel = new System.Windows.Forms.Label();
+            this.LanguageCombo = new System.Windows.Forms.ComboBox();
             this.ProfileCombo = new System.Windows.Forms.ComboBox();
             this.enableHotkeysCheckBox = new System.Windows.Forms.CheckBox();
             this.startWithWindowsCheckBox = new System.Windows.Forms.CheckBox();
@@ -169,6 +171,8 @@
             // ColorPanel
             // 
             this.ColorPanel.Controls.Add(this.SavePresetButton);
+            this.ColorPanel.Controls.Add(this.LanguageCombo);
+            this.ColorPanel.Controls.Add(this.LanguageLabel);
             this.ColorPanel.Controls.Add(this.DisplayLabel);
             this.ColorPanel.Controls.Add(this.PresetLabel);
             this.ColorPanel.Controls.Add(this.HotkeyHelpLabel);
@@ -237,6 +241,26 @@
             this.SavePresetButton.Text = "Save";
             this.SavePresetButton.UseVisualStyleBackColor = true;
             this.SavePresetButton.Click += new System.EventHandler(this.SavePresetClicked);
+            //
+            // LanguageLabel
+            //
+            this.LanguageLabel.AutoSize = true;
+            this.LanguageLabel.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.LanguageLabel.Location = new System.Drawing.Point(3, 280);
+            this.LanguageLabel.Name = "LanguageLabel";
+            this.LanguageLabel.Size = new System.Drawing.Size(90, 22);
+            this.LanguageLabel.TabIndex = 25;
+            this.LanguageLabel.Text = "Language";
+            //
+            // LanguageCombo
+            //
+            this.LanguageCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.LanguageCombo.FormattingEnabled = true;
+            this.LanguageCombo.Location = new System.Drawing.Point(3, 305);
+            this.LanguageCombo.Name = "LanguageCombo";
+            this.LanguageCombo.Size = new System.Drawing.Size(180, 30);
+            this.LanguageCombo.TabIndex = 26;
+            this.LanguageCombo.SelectedValueChanged += new System.EventHandler(this.LanguageCombo_SelectedValueChanged);
             //
             // ProfileCombo
             //
@@ -731,6 +755,8 @@
         private System.Windows.Forms.Label PresetLabel;
         private System.Windows.Forms.Label DisplayLabel;
         private System.Windows.Forms.Button SavePresetButton;
+        private System.Windows.Forms.Label LanguageLabel;
+        private System.Windows.Forms.ComboBox LanguageCombo;
         private System.Windows.Forms.ComboBox ProfileCombo;
         private System.Windows.Forms.Label StatusLabel;
         private System.Windows.Forms.ToolTip dvlToolTip;

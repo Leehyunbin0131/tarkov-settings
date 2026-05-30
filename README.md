@@ -32,16 +32,17 @@ You can change any of the following color settings:
 2. Open application (SmartScreen might prevent opening as it's not signed)
 3. Choose one of the four presets.
 4. Set any color value and click **Save** to store it in the selected preset.
-5. Hover the `?` icons next to each setting to see what it changes.
-6. Double-click any slider labels to reset their values.
-7. Minimize and play EFT
-8. Close application if you want to deactivate
+5. Open **Miscs** and choose a language: English, Korean, Japanese, or Chinese.
+6. Hover the `?` icons next to each setting to see what it changes.
+7. Double-click any slider labels to reset their values.
+8. Minimize and play EFT
+9. Close application if you want to deactivate
 
 Settings are saved to `%APPDATA%\tarkov-settings\settings.json`.
 
 ## App Controls
 - **Color**: Brightness, Contrast, Gamma, DVL/Saturation, four presets, and display settings
-- **Miscs**: Windows startup, hotkeys, and minimize-to-tray options
+- **Miscs**: Windows startup, hotkeys, language, and minimize-to-tray options
 
 ## Hotkeys
 - `Ctrl + Alt + T`: Toggle Enable on/off
@@ -72,6 +73,7 @@ Settings are saved to `%APPDATA%\tarkov-settings\settings.json`.
 - [x] Profiles
 - [x] 4 preset hotkeys
 - [x] Hot Keys
+- [x] Language setting (English/Korean/Japanese/Chinese)
 - [ ] EFT setting modify (Framelimit or Graphic Settings)
 
 Thanks for your support!
