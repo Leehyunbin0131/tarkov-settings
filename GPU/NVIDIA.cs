@@ -1,9 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
 using System.Windows.Forms;
 using NvAPIWrapper.Native;
 using NvAPIWrapper.Native.Display.Structures;
@@ -13,7 +8,9 @@ namespace tarkov_settings.GPU
     class NVIDIA : IGPU
     {
         private GPUVendor _vendor;
+        private string _deviceName;
         private DisplayHandle displayHandle;
+        private bool displayLoaded;
 
         private int _maxSaturation;
         private int _minSaturation;
@@ -24,6 +21,10 @@ namespace tarkov_settings.GPU
         {
             get => this._vendor;
         }
+
+        public string DeviceName => _deviceName;
+
+        public bool SupportsSaturation => true;
 
         public int MaxSaturation
         {
@@ -55,7 +56,7 @@ namespace tarkov_settings.GPU
             }
         }
 
-        public NVIDIA(GPUVendor vendor)
+        public NVIDIA(GPUVendor vendor, string deviceName)
         {
             try
             { 
@@ -66,19 +67,31 @@ namespace tarkov_settings.GPU
                 MessageBox.Show("NvAPI Intialize Failed", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             this._vendor = vendor;
+            this._deviceName = deviceName;
         }
 
         public void ResetSaturation()
         {
-            this.Saturation = this.InitSaturation;
+            if (displayLoaded)
+                this.Saturation = this.InitSaturation;
         }
 
         public void Load(string display) {
-            displayHandle = DisplayApi.GetAssociatedNvidiaDisplayHandle(display);
-            PrivateDisplayDVCInfo dvcInfo = DisplayApi.GetDVCInfo(displayHandle);
-            this._maxSaturation = dvcInfo.MaximumLevel;
-            this._minSaturation = dvcInfo.MinimumLevel;
-            this._initSaturation = this.currentSaturation = dvcInfo.CurrentLevel;
+            try
+            {
+                displayHandle = DisplayApi.GetAssociatedNvidiaDisplayHandle(display);
+                PrivateDisplayDVCInfo dvcInfo = DisplayApi.GetDVCInfo(displayHandle);
+                this._maxSaturation = dvcInfo.MaximumLevel;
+                this._minSaturation = dvcInfo.MinimumLevel;
+                this._initSaturation = this.currentSaturation = dvcInfo.CurrentLevel;
+                displayLoaded = true;
+            }
+            catch (Exception ex)
+            {
+                displayLoaded = false;
+                tarkov_settings.AppLogger.Error($"Failed to load NVIDIA DVC info for {display}", ex);
+                throw;
+            }
         }
 
         public void Close() {

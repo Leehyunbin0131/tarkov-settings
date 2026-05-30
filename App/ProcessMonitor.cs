@@ -18,6 +18,9 @@ namespace tarkov_settings
 
         public static void SetHook()
         {
+            if (dele == null)
+                return;
+
             m_hhook = SetWinEventHook(EVENT_SYSTEM_FOREGROUND,
                 EVENT_SYSTEM_FOREGROUND,
                 IntPtr.Zero,
@@ -27,7 +30,11 @@ namespace tarkov_settings
 
         public static void UnHook()
         {
-            UnhookWinEvent(m_hhook);
+            if (m_hhook != IntPtr.Zero)
+            {
+                UnhookWinEvent(m_hhook);
+                m_hhook = IntPtr.Zero;
+            }
         }
 
         #region Win32 API Calls
@@ -84,7 +91,8 @@ namespace tarkov_settings
 
         public void Add(string process)
         {
-            this.pTargets.Add(process);
+            if (!string.IsNullOrWhiteSpace(process))
+                this.pTargets.Add(process.ToLowerInvariant());
         }
 
         public void Init()
@@ -103,9 +111,18 @@ namespace tarkov_settings
         public void WinEventProc(IntPtr hWinEventHook, uint eventType, IntPtr hWnd, int idObject, int idChild, uint dwEventThread, uint dwmsEventTime)
         {
             Console.WriteLine("Running Tasks : {0}", GetWorkingThreads());
-            Console.WriteLine("Focused Process : {0}", NativeMethods.GetActiveWindowTitle());
+            RefreshCurrentFocus();
+        }
 
-            if (this.pTargets.Contains(NativeMethods.GetActiveWindowTitle().ToLower()) && Parent.IsEnabled)
+        public void RefreshCurrentFocus()
+        {
+            var activeProcess = NativeMethods.GetActiveWindowTitle();
+            Console.WriteLine("Focused Process : {0}", activeProcess);
+
+            var isTargetFocused = !string.IsNullOrWhiteSpace(activeProcess)
+                && this.pTargets.Contains(activeProcess.ToLowerInvariant());
+
+            if (isTargetFocused && Parent.IsEnabled)
             {
                 Console.WriteLine("[pMonitor] Target Process is focused");
 
@@ -115,13 +132,24 @@ namespace tarkov_settings
                                             gamma: g,
                                             reset: false);
                 cController.DVL = dvl;
+                Parent.UpdateRuntimeStatus("Tarkov Active", activeProcess);
             }
             else
             {
                 Console.WriteLine("[pMonitor] Target Process is not focused");
-                cController.ChangeColorRamp(reset: true);
-                cController.ResetDVL();
+                ResetColors();
+                Parent.UpdateRuntimeStatus(Parent.IsEnabled ? "Desktop" : "Disabled", activeProcess);
             }
+        }
+
+        public void ResetColors()
+        {
+            cController.ResetAll();
+        }
+
+        public string GetActiveProcessName()
+        {
+            return NativeMethods.GetActiveWindowTitle();
         }
 
         /**

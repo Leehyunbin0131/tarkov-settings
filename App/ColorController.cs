@@ -9,11 +9,13 @@ namespace tarkov_settings
 {
     class ColorController
     {
-        IGPU gpu = GPUDevice.Instance;
+        private IGPU gpu = GPUDevice.Instance;
+        private readonly object rampLock = new object();
 
         // Gamma Ramps
         private RAMP currentRamps;
         private RAMP originalRamps;
+        private bool initialized;
 
         /**
          * _canceller : Token Source to abort Async-Task (Gamma Value Change)
@@ -47,7 +49,17 @@ namespace tarkov_settings
             get => gpu.Saturation;
             set
             {
-                gpu.Saturation = value;
+                if (!gpu.SupportsSaturation)
+                    return;
+
+                try
+                {
+                    gpu.Saturation = value;
+                }
+                catch (Exception ex)
+                {
+                    AppLogger.Error("Failed to set saturation", ex);
+                }
             }
         }
 
@@ -59,75 +71,63 @@ namespace tarkov_settings
         public void Init()
         {
             // Backup Gamma Ramp
-            var hdc = IntPtr.Zero;
-            try
+            lock (rampLock)
             {
-                hdc = Display.CreateDC(null, Display.Primary, null, IntPtr.Zero);
-                currentRamps = new RAMP();
-                originalRamps = new RAMP();
-                GetDeviceGammaRamp(hdc, ref originalRamps);
-            }
-            finally
-            {
-                if (!IntPtr.Zero.Equals(hdc))
-                    Display.DeleteDC(hdc);
+                var hdc = IntPtr.Zero;
+                try
+                {
+                    hdc = Display.CreateDC(null, Display.Primary, null, IntPtr.Zero);
+                    currentRamps = new RAMP();
+                    originalRamps = CreateDefaultRamp();
+
+                    if (!IntPtr.Zero.Equals(hdc))
+                        GetDeviceGammaRamp(hdc, ref originalRamps);
+
+                    initialized = true;
+                    AppLogger.Info($"Color controller initialized for {Display.Primary}.");
+                }
+                catch (Exception ex)
+                {
+                    originalRamps = CreateDefaultRamp();
+                    initialized = true;
+                    AppLogger.Error("Failed to back up gamma ramp. Default ramp will be used for reset.", ex);
+                }
+                finally
+                {
+                    if (!IntPtr.Zero.Equals(hdc))
+                        Display.DeleteDC(hdc);
+                }
             }
         }
 
-        public async void ChangeColorRamp(double brightness = 0.5, double contrast = 0.5, double gamma = 1.0, bool reset = true)
+        public void ChangeColorRamp(double brightness = 0.5, double contrast = 0.5, double gamma = 1.0, bool reset = true)
         {
-            var hdc = IntPtr.Zero;
-            try
-            {
-                hdc = Display.CreateDC(null, Display.Primary, null, IntPtr.Zero);
+            if (!initialized)
+                Init();
 
-                try
-                {
-                    if (_canceller != null)
-                    {
-                        _canceller.Cancel();
-                        _canceller.Dispose();
-                    }
-                }
-                catch (ObjectDisposedException) { }
+            lock (rampLock)
+            {
+                StopRampLoopLocked();
 
                 if (reset)
-                {                    
-                   SetDeviceGammaRamp(hdc, ref originalRamps);
-                }
-                else
                 {
-                    ushort[] iArrayValue = CalculateLUT(brightness, contrast, gamma);
-                    currentRamps.Red = currentRamps.Blue = currentRamps.Green = iArrayValue;
-
-                    _canceller = new CancellationTokenSource();
-                    CancellationToken token;
-                    try
-                    {
-                        token = _canceller.Token;
-                    }
-                    catch (ObjectDisposedException) { }
-
-                    await Task.Run(() =>
-                    {
-                        try
-                        {
-                            do
-                            {
-                                SetDeviceGammaRamp(hdc, ref currentRamps);
-                                Thread.Sleep(250);
-                                if (token.IsCancellationRequested)
-                                    break;
-                            } while (true);
-                        }
-                        catch (ObjectDisposedException) { }
-                    });
+                    ApplyRamp(originalRamps);
+                    return;
                 }
-            }
-            finally
-            {
-                if (!IntPtr.Zero.Equals(hdc))
-                    Display.DeleteDC(hdc);
+
+                ushort[] iArrayValue = CalculateLUT(brightness, contrast, gamma);
+                currentRamps = new RAMP
+                {
+                    Red = iArrayValue,
+                    Blue = iArrayValue,
+                    Green = iArrayValue
+                };
+
+                _canceller = new CancellationTokenSource();
+                var token = _canceller.Token;
+                var ramps = currentRamps;
+
+                Task.Run(() => ApplyRampLoop(ramps, token), token);
             }
         }
 
@@ -169,23 +169,111 @@ namespace tarkov_settings
             {
                 gpu.ResetSaturation();
                 Console.WriteLine("[DVL] Reset to : {0}", gpu.InitSaturation);
-            }catch (NotImplementedException){ }
+                AppLogger.Info($"DVL reset to {gpu.InitSaturation}.");
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Failed to reset DVL", ex);
+            }
+        }
+
+        public void ResetAll()
+        {
+            lock (rampLock)
+            {
+                StopRampLoopLocked();
+                ApplyRamp(originalRamps);
+            }
+
+            ResetDVL();
+        }
+
+        public void ResetToDefaultRamp()
+        {
+            lock (rampLock)
+            {
+                StopRampLoopLocked();
+                ApplyRamp(CreateDefaultRamp());
+            }
         }
 
         internal void Close()
         {
-            ResetDVL();
-            ChangeColorRamp(reset: true);
+            ResetAll();
+        }
 
+        private void ApplyRampLoop(RAMP ramps, CancellationToken token)
+        {
             try
             {
-                if (_canceller != null)
+                while (!token.IsCancellationRequested)
                 {
-                    _canceller.Cancel();
-                    _canceller.Dispose();
+                    ApplyRamp(ramps);
+                    if (token.WaitHandle.WaitOne(250))
+                        break;
                 }
             }
-            catch (ObjectDisposedException) { }
+            catch (ObjectDisposedException)
+            {
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Gamma ramp loop failed", ex);
+            }
+        }
+
+        private bool ApplyRamp(RAMP ramps)
+        {
+            var hdc = IntPtr.Zero;
+            try
+            {
+                hdc = Display.CreateDC(null, Display.Primary, null, IntPtr.Zero);
+                if (IntPtr.Zero.Equals(hdc))
+                    return false;
+
+                return SetDeviceGammaRamp(hdc, ref ramps);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Failed to apply gamma ramp", ex);
+                return false;
+            }
+            finally
+            {
+                if (!IntPtr.Zero.Equals(hdc))
+                    Display.DeleteDC(hdc);
+            }
+        }
+
+        private void StopRampLoopLocked()
+        {
+            try
+            {
+                if (_canceller == null)
+                    return;
+
+                _canceller.Cancel();
+                _canceller.Dispose();
+                _canceller = null;
+            }
+            catch (ObjectDisposedException)
+            {
+                _canceller = null;
+            }
+        }
+
+        private static RAMP CreateDefaultRamp()
+        {
+            var values = new ushort[256];
+            for (var i = 0; i < values.Length; i++)
+                values[i] = (ushort)(i * 257);
+
+            return new RAMP
+            {
+                Red = values,
+                Green = values,
+                Blue = values
+            };
         }
 
     }

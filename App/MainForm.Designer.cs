@@ -35,6 +35,11 @@
             this.MiscsButton = new System.Windows.Forms.ToolStripButton();
             this.ColorButton = new System.Windows.Forms.ToolStripButton();
             this.ColorPanel = new System.Windows.Forms.Panel();
+            this.HotkeyHelpLabel = new System.Windows.Forms.Label();
+            this.StatusLabel = new System.Windows.Forms.Label();
+            this.ProfileCombo = new System.Windows.Forms.ComboBox();
+            this.enableHotkeysCheckBox = new System.Windows.Forms.CheckBox();
+            this.startWithWindowsCheckBox = new System.Windows.Forms.CheckBox();
             this.minimizeStartCheckBox = new System.Windows.Forms.CheckBox();
             this.DisplayCombo = new System.Windows.Forms.ComboBox();
             this.DVLGroupBox = new System.Windows.Forms.GroupBox();
@@ -59,6 +64,7 @@
             this.trayIcon = new System.Windows.Forms.NotifyIcon(this.components);
             this.trayMenuStrip = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.enableToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.resetColorsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.brightnessToolTip = new System.Windows.Forms.ToolTip(this.components);
@@ -107,7 +113,7 @@
             this.layoutTablePanel.RowCount = 1;
             this.layoutTablePanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 18.4669F));
             this.layoutTablePanel.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 81.5331F));
-            this.layoutTablePanel.Size = new System.Drawing.Size(734, 372);
+            this.layoutTablePanel.Size = new System.Drawing.Size(734, 440);
             this.layoutTablePanel.TabIndex = 0;
             // 
             // SideMenu
@@ -124,13 +130,12 @@
             this.SideMenu.Location = new System.Drawing.Point(0, 5);
             this.SideMenu.Margin = new System.Windows.Forms.Padding(0, 5, 0, 5);
             this.SideMenu.Name = "SideMenu";
-            this.SideMenu.Size = new System.Drawing.Size(76, 362);
+            this.SideMenu.Size = new System.Drawing.Size(76, 430);
             this.SideMenu.TabIndex = 1;
             this.SideMenu.Text = "colorSettings";
             // 
             // MiscsButton
             // 
-            this.MiscsButton.Enabled = false;
             this.MiscsButton.Font = new System.Drawing.Font("Consolas", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.MiscsButton.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
             this.MiscsButton.Image = global::tarkov_settings.Properties.Resources.nikita;
@@ -140,6 +145,7 @@
             this.MiscsButton.Text = "Miscs";
             this.MiscsButton.TextDirection = System.Windows.Forms.ToolStripTextDirection.Horizontal;
             this.MiscsButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
+            this.MiscsButton.Click += new System.EventHandler(this.ShowMiscsMode);
             // 
             // ColorButton
             // 
@@ -151,9 +157,15 @@
             this.ColorButton.Size = new System.Drawing.Size(73, 74);
             this.ColorButton.Text = "Color";
             this.ColorButton.TextImageRelation = System.Windows.Forms.TextImageRelation.ImageAboveText;
+            this.ColorButton.Click += new System.EventHandler(this.ShowColorMode);
             // 
             // ColorPanel
             // 
+            this.ColorPanel.Controls.Add(this.HotkeyHelpLabel);
+            this.ColorPanel.Controls.Add(this.StatusLabel);
+            this.ColorPanel.Controls.Add(this.ProfileCombo);
+            this.ColorPanel.Controls.Add(this.enableHotkeysCheckBox);
+            this.ColorPanel.Controls.Add(this.startWithWindowsCheckBox);
             this.ColorPanel.Controls.Add(this.minimizeStartCheckBox);
             this.ColorPanel.Controls.Add(this.DisplayCombo);
             this.ColorPanel.Controls.Add(this.DVLGroupBox);
@@ -161,15 +173,70 @@
             this.ColorPanel.Dock = System.Windows.Forms.DockStyle.Fill;
             this.ColorPanel.Location = new System.Drawing.Point(79, 3);
             this.ColorPanel.Name = "ColorPanel";
-            this.ColorPanel.Size = new System.Drawing.Size(652, 366);
+            this.ColorPanel.Size = new System.Drawing.Size(652, 434);
             this.ColorPanel.TabIndex = 2;
+            //
+            // HotkeyHelpLabel
+            //
+            this.HotkeyHelpLabel.AutoSize = true;
+            this.HotkeyHelpLabel.Font = new System.Drawing.Font("Consolas", 7F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.HotkeyHelpLabel.ForeColor = System.Drawing.SystemColors.ControlDarkDark;
+            this.HotkeyHelpLabel.Location = new System.Drawing.Point(24, 116);
+            this.HotkeyHelpLabel.Name = "HotkeyHelpLabel";
+            this.HotkeyHelpLabel.Size = new System.Drawing.Size(144, 34);
+            this.HotkeyHelpLabel.TabIndex = 21;
+            this.HotkeyHelpLabel.Text = "Ctrl+Alt+T: Toggle\r\nCtrl+Alt+R: Reset";
+            //
+            // StatusLabel
+            //
+            this.StatusLabel.AutoSize = true;
+            this.StatusLabel.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.StatusLabel.Location = new System.Drawing.Point(3, 329);
+            this.StatusLabel.Name = "StatusLabel";
+            this.StatusLabel.Size = new System.Drawing.Size(160, 22);
+            this.StatusLabel.TabIndex = 20;
+            this.StatusLabel.Text = "Status: Loading";
+            //
+            // ProfileCombo
+            //
+            this.ProfileCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.ProfileCombo.FormattingEnabled = true;
+            this.ProfileCombo.Location = new System.Drawing.Point(286, 326);
+            this.ProfileCombo.Name = "ProfileCombo";
+            this.ProfileCombo.Size = new System.Drawing.Size(120, 30);
+            this.ProfileCombo.TabIndex = 19;
+            this.ProfileCombo.SelectedValueChanged += new System.EventHandler(this.ProfileCombo_SelectedValueChanged);
+            //
+            // enableHotkeysCheckBox
+            //
+            this.enableHotkeysCheckBox.AutoSize = true;
+            this.enableHotkeysCheckBox.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.enableHotkeysCheckBox.Location = new System.Drawing.Point(3, 87);
+            this.enableHotkeysCheckBox.Name = "enableHotkeysCheckBox";
+            this.enableHotkeysCheckBox.Size = new System.Drawing.Size(106, 26);
+            this.enableHotkeysCheckBox.TabIndex = 18;
+            this.enableHotkeysCheckBox.Text = "Hotkeys";
+            this.enableHotkeysCheckBox.UseVisualStyleBackColor = true;
+            this.enableHotkeysCheckBox.CheckedChanged += new System.EventHandler(this.CheckOnEnableHotkeys);
+            //
+            // startWithWindowsCheckBox
+            //
+            this.startWithWindowsCheckBox.AutoSize = true;
+            this.startWithWindowsCheckBox.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.startWithWindowsCheckBox.Location = new System.Drawing.Point(3, 51);
+            this.startWithWindowsCheckBox.Name = "startWithWindowsCheckBox";
+            this.startWithWindowsCheckBox.Size = new System.Drawing.Size(206, 26);
+            this.startWithWindowsCheckBox.TabIndex = 17;
+            this.startWithWindowsCheckBox.Text = "Start with Windows";
+            this.startWithWindowsCheckBox.UseVisualStyleBackColor = true;
+            this.startWithWindowsCheckBox.CheckedChanged += new System.EventHandler(this.CheckOnStartWithWindows);
             // 
             // minimizeStartCheckBox
             // 
             this.minimizeStartCheckBox.AutoSize = true;
             this.minimizeStartCheckBox.BackColor = System.Drawing.Color.Transparent;
             this.minimizeStartCheckBox.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.minimizeStartCheckBox.Location = new System.Drawing.Point(289, 332);
+            this.minimizeStartCheckBox.Location = new System.Drawing.Point(3, 170);
             this.minimizeStartCheckBox.Name = "minimizeStartCheckBox";
             this.minimizeStartCheckBox.Size = new System.Drawing.Size(286, 26);
             this.minimizeStartCheckBox.TabIndex = 16;
@@ -182,7 +249,7 @@
             this.DisplayCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.DisplayCombo.FlatStyle = System.Windows.Forms.FlatStyle.System;
             this.DisplayCombo.FormattingEnabled = true;
-            this.DisplayCombo.Location = new System.Drawing.Point(502, 328);
+            this.DisplayCombo.Location = new System.Drawing.Point(502, 326);
             this.DisplayCombo.Name = "DisplayCombo";
             this.DisplayCombo.Size = new System.Drawing.Size(139, 30);
             this.DisplayCombo.TabIndex = 15;
@@ -422,10 +489,11 @@
             this.trayMenuStrip.ImageScalingSize = new System.Drawing.Size(24, 24);
             this.trayMenuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.enableToolStripMenuItem,
+            this.resetColorsToolStripMenuItem,
             this.showToolStripMenuItem,
             this.exitToolStripMenuItem});
             this.trayMenuStrip.Name = "trayMenuStrip";
-            this.trayMenuStrip.Size = new System.Drawing.Size(138, 100);
+            this.trayMenuStrip.Size = new System.Drawing.Size(178, 132);
             // 
             // enableToolStripMenuItem
             // 
@@ -433,20 +501,28 @@
             this.enableToolStripMenuItem.CheckOnClick = true;
             this.enableToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
             this.enableToolStripMenuItem.Name = "enableToolStripMenuItem";
-            this.enableToolStripMenuItem.Size = new System.Drawing.Size(137, 32);
+            this.enableToolStripMenuItem.Size = new System.Drawing.Size(177, 32);
             this.enableToolStripMenuItem.Text = "Enable";
+            this.enableToolStripMenuItem.CheckedChanged += new System.EventHandler(this.EnableToolStripMenuItem_CheckedChanged);
+            //
+            // resetColorsToolStripMenuItem
+            //
+            this.resetColorsToolStripMenuItem.Name = "resetColorsToolStripMenuItem";
+            this.resetColorsToolStripMenuItem.Size = new System.Drawing.Size(177, 32);
+            this.resetColorsToolStripMenuItem.Text = "Reset Colors";
+            this.resetColorsToolStripMenuItem.Click += new System.EventHandler(this.ResetColorsClicked);
             // 
             // showToolStripMenuItem
             // 
             this.showToolStripMenuItem.Name = "showToolStripMenuItem";
-            this.showToolStripMenuItem.Size = new System.Drawing.Size(137, 32);
+            this.showToolStripMenuItem.Size = new System.Drawing.Size(177, 32);
             this.showToolStripMenuItem.Text = "Show";
             this.showToolStripMenuItem.Click += new System.EventHandler(this.ShowForm);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(137, 32);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(177, 32);
             this.exitToolStripMenuItem.Text = "Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.ExitFormClicked);
             // 
@@ -482,7 +558,7 @@
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
             this.BackColor = System.Drawing.Color.White;
-            this.ClientSize = new System.Drawing.Size(734, 372);
+            this.ClientSize = new System.Drawing.Size(734, 440);
             this.Controls.Add(this.layoutTablePanel);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -548,9 +624,15 @@
         private System.Windows.Forms.NotifyIcon trayIcon;
         private System.Windows.Forms.ContextMenuStrip trayMenuStrip;
         private System.Windows.Forms.ToolStripMenuItem enableToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem resetColorsToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem showToolStripMenuItem;
         private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
         private System.Windows.Forms.CheckBox minimizeStartCheckBox;
+        private System.Windows.Forms.CheckBox startWithWindowsCheckBox;
+        private System.Windows.Forms.CheckBox enableHotkeysCheckBox;
+        private System.Windows.Forms.Label HotkeyHelpLabel;
+        private System.Windows.Forms.ComboBox ProfileCombo;
+        private System.Windows.Forms.Label StatusLabel;
         private System.Windows.Forms.ToolTip dvlToolTip;
         private System.Windows.Forms.ToolTip brightnessToolTip;
         private System.Windows.Forms.ToolTip contrastToolTip;

@@ -36,7 +36,13 @@ namespace tarkov_settings
             get => _primary;
             set
             {
-                if (displays.Contains(value))
+                if (displays.Count == 0)
+                {
+                    _primary = null;
+                    return;
+                }
+
+                if (!string.IsNullOrEmpty(value) && displays.Contains(value))
                 {
                     _primary = value;
                     
@@ -49,7 +55,10 @@ namespace tarkov_settings
                 {
                     gpu.Load(_primary);
                 }
-                catch (NotImplementedException) { }
+                catch (Exception ex)
+                {
+                    AppLogger.Error($"Failed to load display {_primary}", ex);
+                }
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using Microsoft.Win32;
 using tarkov_settings.Setting;
 using tarkov_settings.GPU;
 
@@ -13,21 +14,44 @@ namespace tarkov_settings
         private AppSetting appSetting;
 
         private bool minimizeOnStart = false;
+        private bool forceMinimized = false;
+        private bool isExiting = false;
+        private bool shutdownFinalized = false;
+        private bool isLoadingProfile = false;
+        private bool hotkeysRegistered = false;
 
-        public MainForm()
+        private const int HOTKEY_TOGGLE_ENABLE = 1001;
+        private const int HOTKEY_RESET_COLORS = 1002;
+        private const int WM_HOTKEY = 0x0312;
+        private const uint MOD_ALT = 0x0001;
+        private const uint MOD_CONTROL = 0x0002;
+        private const string StartupRegistryValueName = "Tarkov Settings";
+        private const string StartupRegistryPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
+
+        [DllImport("user32.dll")]
+        private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+        [DllImport("user32.dll")]
+        private static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+        public MainForm(string startupProfile = null, bool forceMinimized = false)
         {
             InitializeComponent();
+            this.forceMinimized = forceMinimized;
 
             #region Load App Settings
             // Load Settings
             appSetting = AppSetting.Load();
+            if (!string.IsNullOrWhiteSpace(startupProfile))
+                appSetting.SetActiveProfile(startupProfile);
 
-            Brightness = appSetting.brightness;
-            Contrast = appSetting.contrast;
-            Gamma = appSetting.gamma;
-            DVL = appSetting.saturation;
-            minimizeOnStart = appSetting.minimizeOnStart;
+            LoadProfiles();
+            LoadActiveProfileIntoControls();
+
+            minimizeOnStart = appSetting.minimizeOnStart || forceMinimized;
             this.minimizeStartCheckBox.Checked = minimizeOnStart;
+            this.startWithWindowsCheckBox.Checked = appSetting.startWithWindows;
+            this.enableHotkeysCheckBox.Checked = appSetting.enableHotkeys;
             #endregion
             
             var version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
@@ -35,8 +59,12 @@ namespace tarkov_settings
             _ = new UpdateNotifier(version);
 
             // Saturation Initialize
-            if (gpu.Vendor != GPUVendor.NVIDIA)
+            if (!gpu.SupportsSaturation)
+            {
                 DVLGroupBox.Enabled = false;
+                DVLGroupBox.Text = "DVL (Unsupported)";
+                dvlToolTip.SetToolTip(DVLLabel, $"{gpu.Vendor} GPU does not support Digital Vibrance control in this app.");
+            }
 
             #region Initialize Display
             // Initialize Display Dropdown
@@ -47,8 +75,11 @@ namespace tarkov_settings
             
             if(DisplayCombo.FindString(appSetting.display) != -1)
                 DisplayCombo.SelectedIndex = DisplayCombo.FindString(appSetting.display);
+            else if (DisplayCombo.Items.Count > 0)
+                DisplayCombo.SelectedIndex = 0;
 
-            Display.Primary = (string)DisplayCombo.SelectedItem;
+            if (DisplayCombo.SelectedItem != null)
+                Display.Primary = (string)DisplayCombo.SelectedItem;
             #endregion
 
             // Initialize Process Monitor
@@ -58,31 +89,33 @@ namespace tarkov_settings
                 pMonitor.Add(pTarget.ToLower());
             }
             pMonitor.Init();
+            ShowColorMode(this, EventArgs.Empty);
+            UpdateRuntimeStatus("Desktop");
         }
 
         #region BCGS Getter/Setter
         public double Brightness
         {
             get => BrightnessBar.Value / 100.0;
-            set => BrightnessBar.Value = (int)(value * 100);
+            set => BrightnessBar.Value = ClampToTrackBar(BrightnessBar, (int)(value * 100));
         }
 
         public double Contrast
         {
             get => ContrastBar.Value / 100.0;
-            set => ContrastBar.Value = (int)(value * 100);
+            set => ContrastBar.Value = ClampToTrackBar(ContrastBar, (int)(value * 100));
         }
 
         public double Gamma
         {
             get => GammaBar.Value / 100.0;
-            set => GammaBar.Value = (int)(value * 100);
+            set => GammaBar.Value = ClampToTrackBar(GammaBar, (int)(value * 100));
         }
 
         public int DVL
         {
             get => DVLBar.Value;
-            set => DVLBar.Value = value;
+            set => DVLBar.Value = ClampToTrackBar(DVLBar, value);
         }
 
         public (double, double, double, int) GetColorValue()
@@ -100,6 +133,8 @@ namespace tarkov_settings
 
         private void MainForm_Load(object sender, EventArgs e)
         {
+            RegisterAppHotkeys();
+
             if (minimizeOnStart)
             {
                 this.Visible = false;
@@ -158,6 +193,9 @@ namespace tarkov_settings
         }
         private void DisplayCombo_SelectedValueChanged(object sender, EventArgs e)
         {
+            if (DisplayCombo.SelectedItem == null)
+                return;
+
             string selectedDisplay = (string)DisplayCombo.SelectedItem;
             Display.Primary = selectedDisplay;
 
@@ -165,6 +203,18 @@ namespace tarkov_settings
             {
                 DisplayCombo.SelectedIndex = DisplayCombo.FindString(Display.Primary);
             }
+        }
+
+        private void ProfileCombo_SelectedValueChanged(object sender, EventArgs e)
+        {
+            if (isLoadingProfile || ProfileCombo.SelectedItem == null)
+                return;
+
+            SaveActiveProfileValues();
+            appSetting.SetActiveProfile(ProfileCombo.SelectedItem.ToString());
+            LoadActiveProfileIntoControls();
+            SaveSettings();
+            UpdateRuntimeStatus("Profile Loaded", appSetting.activeProfile);
         }
         #endregion
 
@@ -174,38 +224,237 @@ namespace tarkov_settings
             this.ShowInTaskbar = true;
         }
 
+        private void ShowColorMode(object sender, EventArgs e)
+        {
+            colorGroupBox.Visible = true;
+            DVLGroupBox.Visible = true;
+            ProfileCombo.Visible = true;
+            DisplayCombo.Visible = true;
+
+            startWithWindowsCheckBox.Visible = false;
+            enableHotkeysCheckBox.Visible = false;
+            HotkeyHelpLabel.Visible = false;
+            minimizeStartCheckBox.Visible = false;
+
+            StatusLabel.Location = new System.Drawing.Point(3, 329);
+            ColorButton.Checked = true;
+            MiscsButton.Checked = false;
+        }
+
+        private void ShowMiscsMode(object sender, EventArgs e)
+        {
+            colorGroupBox.Visible = false;
+            DVLGroupBox.Visible = false;
+            ProfileCombo.Visible = false;
+            DisplayCombo.Visible = false;
+
+            startWithWindowsCheckBox.Visible = true;
+            enableHotkeysCheckBox.Visible = true;
+            HotkeyHelpLabel.Visible = true;
+            minimizeStartCheckBox.Visible = true;
+
+            StatusLabel.Location = new System.Drawing.Point(3, 17);
+            ColorButton.Checked = false;
+            MiscsButton.Checked = true;
+        }
+
         private void ExitFormClicked(object sender, EventArgs e)
         {
-            appSetting.brightness = Brightness;
-            appSetting.contrast = Contrast;
-            appSetting.gamma = Gamma;
-            appSetting.saturation = DVL;
-            appSetting.display = (string)DisplayCombo.SelectedItem;
-            appSetting.minimizeOnStart = minimizeOnStart;
-            appSetting.Save();
+            isExiting = true;
+            SaveSettings();
+            FinalizeShutdown();
 
             Application.Exit();
         }
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (e.CloseReason == CloseReason.UserClosing)
+            if (e.CloseReason == CloseReason.UserClosing && !isExiting)
             {
                 e.Cancel = true;
                 this.Hide();
             }
             else
             {
-                Console.WriteLine(e.CloseReason);
-                this.trayIcon.Dispose();
-                Console.WriteLine("[mainForm] Closing pMonitor");
-                pMonitor.Close();
+                SaveSettings();
+                FinalizeShutdown();
             }
         }
 
         private void CheckOnMinimizeToTray(object sender, EventArgs e)
         {
             this.minimizeOnStart = this.minimizeStartCheckBox.Checked;
+        }
+
+        private void CheckOnStartWithWindows(object sender, EventArgs e)
+        {
+            appSetting.startWithWindows = this.startWithWindowsCheckBox.Checked;
+            ApplyStartupRegistration(appSetting.startWithWindows);
+            SaveSettings();
+        }
+
+        private void CheckOnEnableHotkeys(object sender, EventArgs e)
+        {
+            appSetting.enableHotkeys = this.enableHotkeysCheckBox.Checked;
+            if (appSetting.enableHotkeys)
+                RegisterAppHotkeys();
+            else
+                UnregisterAppHotkeys();
+            SaveSettings();
+        }
+
+        private void EnableToolStripMenuItem_CheckedChanged(object sender, EventArgs e)
+        {
+            if (!IsEnabled)
+            {
+                ResetColorsClicked(sender, e);
+                return;
+            }
+
+            pMonitor.RefreshCurrentFocus();
+        }
+
+        private void ResetColorsClicked(object sender, EventArgs e)
+        {
+            UpdateRuntimeStatus("Resetting");
+            pMonitor.ResetColors();
+            UpdateRuntimeStatus(IsEnabled ? "Desktop" : "Disabled");
+        }
+
+        public void UpdateRuntimeStatus(string status, string activeProcess = null)
+        {
+            if (IsDisposed)
+                return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(() => UpdateRuntimeStatus(status, activeProcess)));
+                return;
+            }
+
+            var detail = string.IsNullOrWhiteSpace(activeProcess) ? string.Empty : $" ({activeProcess})";
+            StatusLabel.Text = $"Status: {status}{detail}";
+
+            var trayText = $"Tarkov Settings - {status}";
+            trayIcon.Text = trayText.Length > 63 ? trayText.Substring(0, 63) : trayText;
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_HOTKEY)
+            {
+                switch (m.WParam.ToInt32())
+                {
+                    case HOTKEY_TOGGLE_ENABLE:
+                        enableToolStripMenuItem.Checked = !enableToolStripMenuItem.Checked;
+                        break;
+                    case HOTKEY_RESET_COLORS:
+                        ResetColorsClicked(this, EventArgs.Empty);
+                        break;
+                }
+            }
+
+            base.WndProc(ref m);
+        }
+
+        private void LoadProfiles()
+        {
+            isLoadingProfile = true;
+            ProfileCombo.Items.Clear();
+            foreach (var profileName in appSetting.profiles.Keys)
+            {
+                ProfileCombo.Items.Add(profileName);
+            }
+            ProfileCombo.SelectedItem = appSetting.activeProfile;
+            isLoadingProfile = false;
+        }
+
+        private void LoadActiveProfileIntoControls()
+        {
+            var profile = appSetting.GetActiveProfile();
+            Brightness = profile.brightness;
+            Contrast = profile.contrast;
+            Gamma = profile.gamma;
+            DVL = profile.saturation;
+            appSetting.display = profile.display;
+        }
+
+        private void SaveActiveProfileValues()
+        {
+            appSetting.UpdateActiveProfile(
+                Brightness,
+                Contrast,
+                Gamma,
+                DVL,
+                DisplayCombo.SelectedItem?.ToString() ?? appSetting.display);
+        }
+
+        private void SaveSettings()
+        {
+            SaveActiveProfileValues();
+            appSetting.minimizeOnStart = minimizeOnStart;
+            appSetting.startWithWindows = startWithWindowsCheckBox.Checked;
+            appSetting.enableHotkeys = enableHotkeysCheckBox.Checked;
+            appSetting.Save();
+        }
+
+        private void FinalizeShutdown()
+        {
+            if (shutdownFinalized)
+                return;
+
+            shutdownFinalized = true;
+            Console.WriteLine("[mainForm] Closing pMonitor");
+            UnregisterAppHotkeys();
+            pMonitor.Close();
+
+            if (this.trayIcon != null)
+                this.trayIcon.Dispose();
+        }
+
+        private void RegisterAppHotkeys()
+        {
+            if (hotkeysRegistered || appSetting == null || !appSetting.enableHotkeys || !IsHandleCreated)
+                return;
+
+            hotkeysRegistered = true;
+            RegisterHotKey(Handle, HOTKEY_TOGGLE_ENABLE, MOD_CONTROL | MOD_ALT, (uint)Keys.T);
+            RegisterHotKey(Handle, HOTKEY_RESET_COLORS, MOD_CONTROL | MOD_ALT, (uint)Keys.R);
+        }
+
+        private void UnregisterAppHotkeys()
+        {
+            if (!hotkeysRegistered || !IsHandleCreated)
+                return;
+
+            UnregisterHotKey(Handle, HOTKEY_TOGGLE_ENABLE);
+            UnregisterHotKey(Handle, HOTKEY_RESET_COLORS);
+            hotkeysRegistered = false;
+        }
+
+        private void ApplyStartupRegistration(bool enabled)
+        {
+            try
+            {
+                using (var key = Registry.CurrentUser.CreateSubKey(StartupRegistryPath))
+                {
+                    if (enabled)
+                        key.SetValue(StartupRegistryValueName, $"\"{Application.ExecutablePath}\" --minimized");
+                    else
+                        key.DeleteValue(StartupRegistryValueName, false);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Failed to update startup registration", ex);
+                MessageBox.Show("Could not update Windows startup registration.", "Startup", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                startWithWindowsCheckBox.Checked = false;
+            }
+        }
+
+        private static int ClampToTrackBar(TrackBar trackBar, int value)
+        {
+            return Math.Min(Math.Max(value, trackBar.Minimum), trackBar.Maximum);
         }
     }
 }

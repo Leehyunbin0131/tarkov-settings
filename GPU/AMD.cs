@@ -1,48 +1,52 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace tarkov_settings.GPU
 {
     class AMD : IGPU
     {
         private GPUVendor _vendor;
+        private string _deviceName;
+        private int currentSaturation;
+
         public GPUVendor Vendor
         {
             get => this._vendor;
         }
 
+        public string DeviceName => _deviceName;
+
+        public bool SupportsSaturation => false;
+
         public int Saturation
         {
-            get;set;
+            get => currentSaturation;
+            set => currentSaturation = value;
         }
 
-        int IGPU.MaxSaturation => throw new NotImplementedException();
+        public int MaxSaturation => 0;
 
-        int IGPU.MinSaturation => throw new NotImplementedException();
+        public int MinSaturation => 0;
 
-        int IGPU.InitSaturation => throw new NotImplementedException();
+        public int InitSaturation => 0;
 
-        public AMD(GPUVendor vendor)
+        public AMD(GPUVendor vendor, string deviceName)
         {
             this._vendor = vendor;
+            this._deviceName = deviceName;
         }
 
         public void ResetSaturation()
         {
-            throw new NotImplementedException();
+            currentSaturation = InitSaturation;
         }
 
         public void Load(string display)
         {
-            throw new NotImplementedException();
+            tarkov_settings.AppLogger.Info($"AMD GPU detected. Saturation is disabled for {display}.");
         }
 
         public void Close()
         {
-            throw new NotImplementedException();
         }
     }
 }
